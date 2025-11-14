@@ -1,0 +1,17 @@
+.DS_Store
+build/
+cmake-build-*/
+compile_commands.json
+.cache/
+.idea/
+.vscode/
+_deps/
+conanbuildinfo.*
+conan.lock
+*.user
+*.swp
+*.swo
+*.log
+**/__pycache__/
+alpaca-py/
+.env
