@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -43,6 +44,18 @@ struct Position {
     std::string lastday_price;
     std::string change_today;
     bool asset_marginable{false};
+};
+
+struct AllAccountsPositions {
+    std::string as_of;  // Timestamp
+    std::map<std::string, std::vector<Position>> positions;  // Keyed by account_id
+};
+
+struct ClosePositionResponse {
+    std::optional<std::string> order_id;
+    std::optional<int> status;
+    std::optional<std::string> symbol;
+    std::optional<std::string> body;  // JSON string representation of Order or FailedClosePositionDetails
 };
 
 struct Asset {

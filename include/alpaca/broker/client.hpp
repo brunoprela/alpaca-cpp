@@ -59,12 +59,78 @@ public:
         const std::string& account_id,
         const std::optional<trading::GetOrdersRequest>& request = std::nullopt) const;
     trading::Order get_order_for_account(const std::string& account_id, const std::string& order_id) const;
+    trading::Order get_order_for_account_by_client_id(const std::string& account_id,
+                                                       const std::string& client_order_id) const;
     void cancel_orders_for_account(const std::string& account_id) const;
     void cancel_order_for_account(const std::string& account_id, const std::string& order_id) const;
+
+    std::vector<trading::Position> get_all_positions_for_account(const std::string& account_id) const;
+    trading::AllAccountsPositions get_all_accounts_positions() const;
+    trading::Position get_open_position_for_account(const std::string& account_id,
+                                                     const std::string& symbol_or_asset_id) const;
+    std::vector<trading::ClosePositionResponse> close_all_positions_for_account(
+        const std::string& account_id, const std::optional<bool>& cancel_orders = std::nullopt) const;
+    trading::Order close_position_for_account(const std::string& account_id,
+                                               const std::string& symbol_or_asset_id,
+                                               const std::optional<trading::ClosePositionRequest>& close_options =
+                                                   std::nullopt) const;
+
+    trading::PortfolioHistory get_portfolio_history_for_account(
+        const std::string& account_id,
+        const std::optional<trading::GetPortfolioHistoryRequest>& history_filter = std::nullopt) const;
+
+    trading::Clock get_clock() const;
+    std::vector<trading::CalendarDay> get_calendar(
+        const std::optional<trading::GetCalendarRequest>& filters = std::nullopt) const;
+
+    std::vector<trading::Watchlist> get_watchlists_for_account(const std::string& account_id) const;
+    trading::Watchlist get_watchlist_for_account_by_id(const std::string& account_id,
+                                                        const std::string& watchlist_id) const;
+    trading::Watchlist create_watchlist_for_account(const std::string& account_id,
+                                                     const trading::CreateWatchlistRequest& watchlist_data) const;
+    trading::Watchlist update_watchlist_for_account_by_id(const std::string& account_id,
+                                                           const std::string& watchlist_id,
+                                                           const trading::UpdateWatchlistRequest& watchlist_data) const;
+    trading::Watchlist add_asset_to_watchlist_for_account_by_id(const std::string& account_id,
+                                                                 const std::string& watchlist_id,
+                                                                 const std::string& symbol) const;
+    void delete_watchlist_from_account_by_id(const std::string& account_id, const std::string& watchlist_id) const;
+    trading::Watchlist remove_asset_from_watchlist_for_account_by_id(const std::string& account_id,
+                                                                     const std::string& watchlist_id,
+                                                                     const std::string& symbol) const;
+
+    void exercise_options_position_for_account_by_id(const std::string& account_id,
+                                                      const std::string& symbol_or_contract_id,
+                                                      const std::optional<double>& commission = std::nullopt) const;
+
+    std::vector<trading::Activity> get_account_activities(
+        const GetAccountActivitiesRequest& activity_filter) const;
 
     std::vector<trading::CorporateActionAnnouncement> get_corporate_announcements(
         const trading::GetCorporateAnnouncementsRequest& request) const;
     trading::CorporateActionAnnouncement get_corporate_announcement(const std::string& announcement_id) const;
+
+    // Portfolio methods
+    Portfolio create_portfolio(const CreatePortfolioRequest& portfolio_request) const;
+    std::vector<Portfolio> get_all_portfolios(
+        const std::optional<GetPortfoliosRequest>& filter = std::nullopt) const;
+    Portfolio get_portfolio_by_id(const std::string& portfolio_id) const;
+    Portfolio update_portfolio_by_id(const std::string& portfolio_id,
+                                      const UpdatePortfolioRequest& update_request) const;
+    void inactivate_portfolio_by_id(const std::string& portfolio_id) const;
+
+    // Subscription methods
+    Subscription create_subscription(const CreateSubscriptionRequest& subscription_request) const;
+    std::vector<Subscription> get_all_subscriptions(
+        const std::optional<GetSubscriptionsRequest>& filter = std::nullopt) const;
+    Subscription get_subscription_by_id(const std::string& subscription_id) const;
+    void unsubscribe_account(const std::string& subscription_id) const;
+
+    // Rebalancing run methods
+    RebalancingRun create_manual_run(const CreateRunRequest& rebalancing_run_request) const;
+    std::vector<RebalancingRun> get_all_runs(const std::optional<GetRunsRequest>& filter = std::nullopt) const;
+    RebalancingRun get_run_by_id(const std::string& run_id) const;
+    void cancel_run_by_id(const std::string& run_id) const;
 
     std::size_t stream_account_status_events(const std::optional<GetEventsRequest>& request,
                                              const EventCallback& on_event, std::size_t max_events = 0) const;
@@ -74,6 +140,29 @@ public:
                                       std::size_t max_events = 0) const;
     std::size_t stream_transfer_events(const std::optional<GetEventsRequest>& request, const EventCallback& on_event,
                                        std::size_t max_events = 0) const;
+
+    Account create_account(const CreateAccountRequest& request) const;
+    Account get_account_by_id(const std::string& account_id) const;
+    Account update_account(const std::string& account_id, const UpdateAccountRequest& request) const;
+    void close_account(const std::string& account_id) const;
+    std::vector<Account> list_accounts(const std::optional<ListAccountsRequest>& request = std::nullopt) const;
+
+    TradeAccount get_trade_account_by_id(const std::string& account_id) const;
+    trading::AccountConfiguration get_trade_configuration_for_account(const std::string& account_id) const;
+    trading::AccountConfiguration update_trade_configuration_for_account(
+        const std::string& account_id, const trading::AccountConfigurationPatch& config) const;
+
+    void upload_documents_to_account(const std::string& account_id,
+                                    const std::vector<UploadDocumentRequest>& document_data) const;
+    void upload_w8ben_document_to_account(const std::string& account_id,
+                                          const UploadW8BenDocumentRequest& document_data) const;
+    std::vector<TradeDocument> get_trade_documents_for_account(
+        const std::string& account_id,
+        const std::optional<GetTradeDocumentsRequest>& documents_filter = std::nullopt) const;
+    TradeDocument get_trade_document_for_account_by_id(const std::string& account_id,
+                                                        const std::string& document_id) const;
+    void download_trade_document_for_account_by_id(const std::string& account_id, const std::string& document_id,
+                                                    const std::string& file_path) const;
 
     [[nodiscard]] const core::ClientConfig& config() const noexcept { return config_; }
 

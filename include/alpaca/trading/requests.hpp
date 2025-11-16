@@ -147,6 +147,23 @@ struct AccountConfigurationPatch {
     std::optional<int> max_options_trading_level;
 };
 
+struct GetPortfolioHistoryRequest {
+    std::optional<std::string> period;  // e.g., "1D", "1W", "1M", "1A"
+    std::optional<std::string> timeframe;  // "1Min", "5Min", "15Min", "1H", "1D"
+    std::optional<std::string> intraday_reporting;
+    std::optional<std::string> start;  // RFC3339 timestamp
+    std::optional<std::string> pnl_reset;
+    std::optional<std::string> end;  // RFC3339 timestamp
+    std::optional<std::string> date_end;  // YYYY-MM-DD
+    std::optional<bool> extended_hours;
+    std::optional<std::string> cashflow_types;
+};
+
+struct GetCalendarRequest {
+    std::optional<std::string> start;  // YYYY-MM-DD
+    std::optional<std::string> end;    // YYYY-MM-DD
+};
+
 struct ReplaceOrderRequest {
     std::optional<double> qty;
     std::optional<TimeInForce> time_in_force;

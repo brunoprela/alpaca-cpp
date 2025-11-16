@@ -65,12 +65,12 @@ OptionDataStream::OptionDataStream(std::string api_key, std::string secret_key, 
     pimpl_->host_ = std::string(url.host().data(), url.host().size());
     pimpl_->port_ = url.has_port() ? std::string(url.port().data(), url.port().size()) : "443";
     auto encoded_path = url.encoded_path();
-    pimpl_->path_ = encoded_path.empty() ? "/"
-                                         : std::string(encoded_path.data(), encoded_path.size());
+    pimpl_->path_ =
+        encoded_path.empty() ? "/" : std::string(encoded_path.data(), encoded_path.size());
 }
 
 void OptionDataStream::subscribe_trades(TradeHandler handler,
-                                       const std::vector<std::string> &symbols) {
+                                        const std::vector<std::string> &symbols) {
     for (const auto &symbol : symbols) {
         trade_handlers_[symbol] = handler;
     }
@@ -116,8 +116,8 @@ void OptionDataStream::connect_impl() {
         throw std::runtime_error("Resolve failed: " + ec.message());
     }
 
-    pimpl_->ws_ = std::make_unique<websocket::stream<beast::ssl_stream<tcp::socket>>>(
-        pimpl_->ioc_, pimpl_->ctx_);
+    pimpl_->ws_ = std::make_unique<websocket::stream<beast::ssl_stream<tcp::socket>>>(pimpl_->ioc_,
+                                                                                      pimpl_->ctx_);
 
     auto &lowest_layer = pimpl_->ws_->next_layer().next_layer();
     net::connect(lowest_layer, results.begin(), results.end(), ec);
@@ -130,11 +130,10 @@ void OptionDataStream::connect_impl() {
         throw std::runtime_error("SSL handshake failed: " + ec.message());
     }
 
-    pimpl_->ws_->set_option(websocket::stream_base::decorator(
-        [](websocket::request_type &req) {
-            req.set(http::field::user_agent, "alpaca-cpp/0.1.0");
-            req.set("Content-Type", "application/json");
-        }));
+    pimpl_->ws_->set_option(websocket::stream_base::decorator([](websocket::request_type &req) {
+        req.set(http::field::user_agent, "alpaca-cpp/0.1.0");
+        req.set("Content-Type", "application/json");
+    }));
 
     pimpl_->ws_->handshake(pimpl_->host_, pimpl_->path_, ec);
     if (ec) {
@@ -349,7 +348,7 @@ double get_double_field(simdjson::ondemand::object &obj, std::string_view key,
 }
 
 std::vector<std::string> get_string_array_field(simdjson::ondemand::object &obj,
-                                                 std::string_view key) {
+                                                std::string_view key) {
     std::vector<std::string> result;
     auto field = obj.find_field_unordered(key);
     if (field.error()) {
@@ -481,4 +480,3 @@ void OptionDataStream::close_impl() {
 }
 
 } // namespace alpaca::data::live
-

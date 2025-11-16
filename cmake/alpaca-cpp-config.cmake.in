@@ -1,0 +1,18 @@
+@PACKAGE_INIT@
+
+# Find dependencies
+find_dependency(OpenSSL REQUIRED)
+
+# Include the exported targets
+include("${CMAKE_CURRENT_LIST_DIR}/alpaca-cpp-targets.cmake")
+
+# Check for Boost (optional, may be vendored)
+if(NOT TARGET Boost::boost)
+    find_package(Boost QUIET)
+endif()
+
+# Check for simdjson (may be vendored)
+if(NOT TARGET simdjson::simdjson)
+    find_package(simdjson QUIET)
+endif()
+

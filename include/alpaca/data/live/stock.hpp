@@ -16,6 +16,7 @@ public:
     StockDataStream(std::string api_key, std::string secret_key, bool raw_data = false,
                     DataFeed feed = DataFeed::Iex,
                     std::optional<std::string> url_override = std::nullopt);
+    ~StockDataStream();
 
     // Trade subscriptions
     void subscribe_trades(TradeHandler handler,

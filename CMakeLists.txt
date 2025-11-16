@@ -146,7 +146,7 @@ target_include_directories(alpaca_core
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
-        ${ALPACA_BOOST_INCLUDE_DIR})
+        $<BUILD_INTERFACE:${ALPACA_BOOST_INCLUDE_DIR}>)
 target_compile_features(alpaca_core PUBLIC cxx_std_20)
 target_link_libraries(alpaca_core PUBLIC ${ALPACA_SIMDJSON_TARGET} OpenSSL::SSL OpenSSL::Crypto)
 
@@ -157,7 +157,9 @@ add_library(alpaca_trading
     src/alpaca/trading/stream.cpp)
 target_link_libraries(alpaca_trading PUBLIC alpaca::core)
 if(ALPACA_VENDOR_DEPS)
-    target_include_directories(alpaca_trading PUBLIC ${ALPACA_BOOST_INCLUDE_DIR})
+    target_include_directories(alpaca_trading PUBLIC 
+        $<BUILD_INTERFACE:${ALPACA_BOOST_INCLUDE_DIR}>
+        $<INSTALL_INTERFACE:include>)
 else()
     target_link_libraries(alpaca_trading PUBLIC Boost::boost)
 endif()
@@ -172,7 +174,7 @@ add_library(alpaca::trading ALIAS alpaca_trading)
 add_library(alpaca_broker
     src/alpaca/broker/client.cpp
     src/alpaca/broker/enums.cpp)
-target_link_libraries(alpaca_broker PUBLIC alpaca::core)
+target_link_libraries(alpaca_broker PUBLIC alpaca::core alpaca::trading)
 target_include_directories(alpaca_broker
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -190,7 +192,9 @@ add_library(alpaca_data
     src/alpaca/data/live/news.cpp)
 target_link_libraries(alpaca_data PUBLIC alpaca::core)
 if(ALPACA_VENDOR_DEPS)
-    target_include_directories(alpaca_data PUBLIC ${ALPACA_BOOST_INCLUDE_DIR})
+    target_include_directories(alpaca_data PUBLIC 
+        $<BUILD_INTERFACE:${ALPACA_BOOST_INCLUDE_DIR}>
+        $<INSTALL_INTERFACE:include>)
 else()
     target_link_libraries(alpaca_data PUBLIC Boost::boost)
 endif()
@@ -207,6 +211,24 @@ target_link_libraries(alpaca_example_place_order PRIVATE alpaca::trading)
 
 add_executable(alpaca_example_get_account examples/get_account.cpp)
 target_link_libraries(alpaca_example_get_account PRIVATE alpaca::trading)
+
+add_executable(alpaca_example_get_market_data examples/get_market_data.cpp)
+target_link_libraries(alpaca_example_get_market_data PRIVATE alpaca::data)
+
+add_executable(alpaca_example_list_positions examples/list_positions.cpp)
+target_link_libraries(alpaca_example_list_positions PRIVATE alpaca::trading)
+
+add_executable(alpaca_example_broker_account_management examples/broker_account_management.cpp)
+target_link_libraries(alpaca_example_broker_account_management PRIVATE alpaca::broker)
+
+add_executable(alpaca_example_websocket_streaming examples/websocket_streaming.cpp)
+target_link_libraries(alpaca_example_websocket_streaming PRIVATE alpaca::data)
+
+add_executable(alpaca_example_options examples/options_example.cpp)
+target_link_libraries(alpaca_example_options PRIVATE alpaca::trading)
+
+add_executable(alpaca_example_watchlist_management examples/watchlist_management.cpp)
+target_link_libraries(alpaca_example_watchlist_management PRIVATE alpaca::trading)
 
 if(ALPACA_BUILD_TESTS)
     enable_testing()
@@ -339,3 +361,53 @@ if(ALPACA_BUILD_TESTS)
             PASS_REGULAR_EXPRESSION "Live account cash")
     endif()
 endif()
+
+# Installation support
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+# Install libraries
+install(TARGETS alpaca_core alpaca_trading alpaca_broker alpaca_data
+    EXPORT alpaca-cpp-targets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+# Install headers
+install(DIRECTORY include/alpaca
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING PATTERN "*.hpp"
+)
+
+# Install CMake config files
+install(EXPORT alpaca-cpp-targets
+    FILE alpaca-cpp-targets.cmake
+    NAMESPACE alpaca::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/alpaca-cpp
+)
+
+# Install LICENSE
+install(FILES LICENSE
+    DESTINATION ${CMAKE_INSTALL_DOCDIR}
+)
+
+# Create package config
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/alpaca-cpp-config-version.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY AnyNewerVersion
+)
+
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/alpaca-cpp-config.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/alpaca-cpp-config.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/alpaca-cpp
+)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/alpaca-cpp-config.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/alpaca-cpp-config-version.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/alpaca-cpp
+)

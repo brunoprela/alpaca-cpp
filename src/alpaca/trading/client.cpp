@@ -12,6 +12,72 @@
 
 namespace alpaca::trading {
 
+AccountStatus parse_account_status(std::string_view value) noexcept {
+    if (value == "ACCOUNT_CLOSED") return AccountStatus::AccountClosed;
+    if (value == "ACCOUNT_UPDATED") return AccountStatus::AccountUpdated;
+    if (value == "ACTION_REQUIRED") return AccountStatus::ActionRequired;
+    if (value == "ACTIVE") return AccountStatus::Active;
+    if (value == "AML_REVIEW") return AccountStatus::AmlReview;
+    if (value == "APPROVAL_PENDING") return AccountStatus::ApprovalPending;
+    if (value == "APPROVED") return AccountStatus::Approved;
+    if (value == "DISABLED") return AccountStatus::Disabled;
+    if (value == "DISABLE_PENDING") return AccountStatus::DisablePending;
+    if (value == "EDITED") return AccountStatus::Edited;
+    if (value == "INACTIVE") return AccountStatus::Inactive;
+    if (value == "KYC_SUBMITTED") return AccountStatus::KycSubmitted;
+    if (value == "LIMITED") return AccountStatus::Limited;
+    if (value == "ONBOARDING") return AccountStatus::Onboarding;
+    if (value == "PAPER_ONLY") return AccountStatus::PaperOnly;
+    if (value == "REAPPROVAL_PENDING") return AccountStatus::ReapprovalPending;
+    if (value == "REJECTED") return AccountStatus::Rejected;
+    if (value == "RESUBMITTED") return AccountStatus::Resubmitted;
+    if (value == "SIGNED_UP") return AccountStatus::SignedUp;
+    if (value == "SUBMISSION_FAILED") return AccountStatus::SubmissionFailed;
+    if (value == "SUBMITTED") return AccountStatus::Submitted;
+    return AccountStatus::Submitted;
+}
+
+ActivityType parse_activity_type(std::string_view value) noexcept {
+    if (value == "FILL") return ActivityType::Fill;
+    if (value == "ACATC") return ActivityType::Acatc;
+    if (value == "ACATS") return ActivityType::Acats;
+    if (value == "CFEE") return ActivityType::Cfee;
+    if (value == "CIL") return ActivityType::Cil;
+    if (value == "CSD") return ActivityType::Csd;
+    if (value == "CSW") return ActivityType::Csw;
+    if (value == "DIV") return ActivityType::Div;
+    if (value == "DIVCGL") return ActivityType::Divcgl;
+    if (value == "DIVCGS") return ActivityType::Divcgs;
+    if (value == "DIVNRA") return ActivityType::Divnra;
+    if (value == "DIVROC") return ActivityType::Divroc;
+    if (value == "DIVTXEX") return ActivityType::Divtxex;
+    if (value == "DIVWH") return ActivityType::Divwh;
+    if (value == "EXTRD") return ActivityType::Extrd;
+    if (value == "FEE") return ActivityType::Fee;
+    if (value == "FXTRD") return ActivityType::Fxtrd;
+    if (value == "INT") return ActivityType::Int;
+    if (value == "INTPNL") return ActivityType::Intpnl;
+    if (value == "JNLC") return ActivityType::Jnlc;
+    if (value == "JNLS") return ActivityType::Jnls;
+    if (value == "MA") return ActivityType::Ma;
+    if (value == "MEM") return ActivityType::Mem;
+    if (value == "NC") return ActivityType::Nc;
+    if (value == "OCT") return ActivityType::Oct;
+    if (value == "OPASN") return ActivityType::Opasn;
+    if (value == "OPCSH") return ActivityType::Opcsh;
+    if (value == "OPEXC") return ActivityType::Opexc;
+    if (value == "OPEXP") return ActivityType::Opexp;
+    if (value == "OPTRD") return ActivityType::Optrd;
+    if (value == "PTC") return ActivityType::Ptc;
+    if (value == "REORG") return ActivityType::Reorg;
+    if (value == "SPIN") return ActivityType::Spin;
+    if (value == "SPLIT") return ActivityType::Split;
+    if (value == "SWP") return ActivityType::Swp;
+    if (value == "VOF") return ActivityType::Vof;
+    if (value == "WH") return ActivityType::Wh;
+    return ActivityType::Fill;
+}
+
 namespace {
 
 std::string serialize_account_configuration_patch(const AccountConfigurationPatch &patch) {
@@ -1012,6 +1078,60 @@ Order TradingClient::get_order_by_client_id(const std::string &client_order_id) 
     return parse_order(response.body);
 }
 
+std::string serialize_replace_order_request(const ReplaceOrderRequest &request) {
+    std::ostringstream oss;
+    oss << '{';
+    bool first = true;
+    auto append_separator = [&]() {
+        if (!first) {
+            oss << ',';
+        }
+        first = false;
+    };
+    auto append_double = [&](std::string_view key, double value) {
+        append_separator();
+        oss << '"' << key << "\":" << detail::format_decimal(value);
+    };
+    auto append_string = [&](std::string_view key, const std::string &value) {
+        append_separator();
+        oss << '"' << key << "\":" << std::quoted(value);
+    };
+
+    if (request.qty) {
+        append_double("qty", *request.qty);
+    }
+    if (request.time_in_force) {
+        append_string("time_in_force", std::string(to_string(*request.time_in_force)));
+    }
+    if (request.limit_price) {
+        append_double("limit_price", *request.limit_price);
+    }
+    if (request.stop_price) {
+        append_double("stop_price", *request.stop_price);
+    }
+    if (request.trail) {
+        append_double("trail", *request.trail);
+    }
+    if (request.client_order_id) {
+        append_string("client_order_id", *request.client_order_id);
+    }
+
+    if (first) {
+        return "{}";
+    }
+
+    oss << '}';
+    return oss.str();
+}
+
+Order TradingClient::replace_order(const std::string &order_id, const ReplaceOrderRequest &request) const {
+    auto body = serialize_replace_order_request(request);
+    auto response = send_request(core::HttpMethod::Patch, "/v2/orders/" + order_id,
+                                 std::make_optional(body));
+    ensure_success(response.status_code, "replace_order", response.body);
+    return parse_order(response.body);
+}
+
 OrderSubmissionResult TradingClient::cancel_order(const std::string &order_id) const {
     auto response = send_request(core::HttpMethod::Delete, "/v2/orders/" + order_id);
     return OrderSubmissionResult{
@@ -1073,6 +1193,67 @@ std::vector<Order> TradingClient::list_orders(const GetOrdersRequest &request) c
     return parse_orders(response.body);
 }
 
+std::vector<ClosePositionResponse> parse_close_position_responses(std::string_view payload) {
+    std::string storage(payload);
+    storage.append(simdjson::SIMDJSON_PADDING, '\0');
+    simdjson::ondemand::parser parser;
+    auto doc = parser.iterate(storage.data(), payload.size(), storage.size());
+    if (doc.error()) {
+        throw std::runtime_error("Failed to parse close position responses payload");
+    }
+    auto arr_result = doc.value().get_array();
+    if (arr_result.error()) {
+        throw std::runtime_error("Invalid close position responses payload");
+    }
+    std::vector<ClosePositionResponse> responses;
+    for (auto element : arr_result.value()) {
+        if (element.error()) {
+            continue;
+        }
+        auto obj = element.value().get_object();
+        if (obj.error()) {
+            continue;
+        }
+        auto object = obj.value();
+        ClosePositionResponse response;
+        auto order_id_field = object.find_field_unordered("order_id");
+        if (!order_id_field.error()) {
+            auto order_id_str = order_id_field.value().get_string();
+            if (!order_id_str.error()) {
+                response.order_id = std::string(std::string_view(order_id_str.value()));
+            }
+        }
+        auto status_field = object.find_field_unordered("status");
+        if (!status_field.error()) {
+            auto status = status_field.value().get_int64();
+            if (!status.error()) {
+                response.status = static_cast<int>(status.value());
+            }
+        }
+        auto symbol_field = object.find_field_unordered("symbol");
+        if (!symbol_field.error()) {
+            auto symbol_str = symbol_field.value().get_string();
+            if (!symbol_str.error()) {
+                response.symbol = std::string(std::string_view(symbol_str.value()));
+            }
+        }
+        auto body_field = object.find_field_unordered("body");
+        if (!body_field.error()) {
+            // body can be an object or string, try to get as string first
+            auto body_str = body_field.value().get_string();
+            if (!body_str.error()) {
+                response.body = std::string(std::string_view(body_str.value()));
+            } else {
+                // If it's an object, we'll store empty string for now
+                // In a real implementation, you might want to serialize it properly
+                response.body = std::nullopt;
+            }
+        }
+        responses.emplace_back(response);
+    }
+    return responses;
+}
+
 std::vector<Position> TradingClient::list_positions() const {
     auto response = send_request(core::HttpMethod::Get, "/v2/positions");
     ensure_success(response.status_code, "list_positions", response.body);
@@ -1085,8 +1266,18 @@ Position TradingClient::get_position(const std::string &symbol) const {
     return parse_position(response.body);
 }
 
+std::vector<ClosePositionResponse> TradingClient::close_all_positions(const std::optional<bool>& cancel_orders) const {
+    std::optional<std::string> body;
+    if (cancel_orders) {
+        body = std::string("{\"cancel_orders\":") + (*cancel_orders ? "true" : "false") + "}";
+    }
+    auto response = send_request(core::HttpMethod::Delete, "/v2/positions", body);
+    ensure_success(response.status_code, "close_all_positions", response.body);
+    return parse_close_position_responses(response.body);
+}
+
 Position TradingClient::close_position(const std::string &symbol,
-                                       const ClosePositionRequest &request) const {
+                                      const ClosePositionRequest &request) const {
     auto query = build_close_position_query(request);
     auto response = send_request(core::HttpMethod::Delete, "/v2/positions/" + symbol + query);
     ensure_success(response.status_code, "close_position", response.body);

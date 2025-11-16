@@ -18,11 +18,13 @@ public:
     OrderSubmissionResult submit_order(const OrderRequest& request) const;
     Order get_order(const std::string& order_id) const;
     Order get_order_by_client_id(const std::string& client_order_id) const;
+    Order replace_order(const std::string& order_id, const ReplaceOrderRequest& request) const;
     OrderSubmissionResult cancel_order(const std::string& order_id) const;
     std::vector<OrderSubmissionResult> cancel_orders() const;
     std::vector<Order> list_orders(const GetOrdersRequest& request) const;
     std::vector<Position> list_positions() const;
     Position get_position(const std::string& symbol) const;
+    std::vector<ClosePositionResponse> close_all_positions(const std::optional<bool>& cancel_orders = std::nullopt) const;
     Position close_position(const std::string& symbol, const ClosePositionRequest& request) const;
     void exercise_options_position(const std::string& symbol_or_contract_id) const;
     std::vector<Asset> list_assets(const ListAssetsRequest& request) const;

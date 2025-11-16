@@ -74,6 +74,8 @@ StockDataStream::StockDataStream(std::string api_key, std::string secret_key, bo
                                          : std::string(encoded_path.data(), encoded_path.size());
 }
 
+StockDataStream::~StockDataStream() = default;
+
 void StockDataStream::subscribe_trades(TradeHandler handler,
                                        const std::vector<std::string> &symbols) {
     for (const auto &symbol : symbols) {
