@@ -10,6 +10,7 @@ int main() {
     auto config = core::ClientConfig::WithPaperKeys("key", "secret");
     auto transport = std::make_shared<core::MockHttpTransport>();
     transport->enqueue_response({201, {}, R"({"id":"abc","status":"accepted"})"});
+    transport->enqueue_response({201, {}, R"({"id":"order-2","status":"accepted"})"});
     transport->enqueue_response(
         {200,
          {},
@@ -47,7 +48,6 @@ int main() {
     limit_order.take_profit = trading::TakeProfitRequest{.limit_price = 260.0};
     limit_order.stop_loss = trading::StopLossRequest{.stop_price = 240.0};
 
-    transport->enqueue_response({201, {}, R"({"id":"order-2","status":"accepted"})"});
     client.submit_order(limit_order);
     const auto &limit_request = transport->requests()[1];
     if (limit_request.body.find("\"limit_price\":250") == std::string::npos ||

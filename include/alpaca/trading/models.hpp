@@ -179,5 +179,40 @@ struct AccountConfiguration {
     std::optional<int> max_options_trading_level;
 };
 
+struct TradeUpdate {
+    std::string event;
+    std::optional<std::string> execution_id;
+    Order order;
+    std::string timestamp;
+    std::optional<double> position_qty;
+    std::optional<double> price;
+    std::optional<double> qty;
+};
+
+struct OptionContract {
+    std::string id;
+    std::string symbol;
+    std::string name;
+    std::string status;
+    bool tradable{false};
+    std::string expiration_date;
+    std::string root_symbol;
+    std::string underlying_symbol;
+    std::string underlying_asset_id;
+    std::string type;  // ContractType: "call" or "put"
+    std::string style; // ExerciseStyle: "american" or "european"
+    double strike_price{0.0};
+    std::string size;
+    std::optional<std::string> open_interest;
+    std::optional<std::string> open_interest_date;
+    std::optional<std::string> close_price;
+    std::optional<std::string> close_price_date;
+};
+
+struct OptionContractsResponse {
+    std::vector<OptionContract> option_contracts;
+    std::optional<std::string> next_page_token;
+};
+
 }  // namespace alpaca::trading
 

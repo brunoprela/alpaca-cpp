@@ -9,6 +9,7 @@ enum class OrderType { Market, Limit, Stop, StopLimit, TrailingStop };
 enum class OrderClass { Simple, Bracket, Oco, Oto, Mleg };
 enum class TimeInForce { Day, Gtc, Ioc, Fok, Opn, Cls };
 enum class PositionIntent { BuyToOpen, BuyToClose, SellToOpen, SellToClose };
+enum class ContractType { Call, Put };
 
 [[nodiscard]] constexpr std::string_view to_string(OrderSide side) noexcept {
     switch (side) {
@@ -82,6 +83,16 @@ enum class PositionIntent { BuyToOpen, BuyToClose, SellToOpen, SellToClose };
             return "sell_to_close";
     }
     return "buy_to_open";
+}
+
+[[nodiscard]] constexpr std::string_view to_string(ContractType type) noexcept {
+    switch (type) {
+    case ContractType::Call:
+        return "call";
+    case ContractType::Put:
+        return "put";
+    }
+    return "call";
 }
 
 }  // namespace alpaca::trading

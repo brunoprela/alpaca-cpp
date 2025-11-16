@@ -153,8 +153,14 @@ target_link_libraries(alpaca_core PUBLIC ${ALPACA_SIMDJSON_TARGET} OpenSSL::SSL 
 add_library(alpaca::core ALIAS alpaca_core)
 
 add_library(alpaca_trading
-    src/alpaca/trading/client.cpp)
+    src/alpaca/trading/client.cpp
+    src/alpaca/trading/stream.cpp)
 target_link_libraries(alpaca_trading PUBLIC alpaca::core)
+if(ALPACA_VENDOR_DEPS)
+    target_include_directories(alpaca_trading PUBLIC ${ALPACA_BOOST_INCLUDE_DIR})
+else()
+    target_link_libraries(alpaca_trading PUBLIC Boost::boost)
+endif()
 target_include_directories(alpaca_trading
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -174,6 +180,27 @@ target_include_directories(alpaca_broker
 target_compile_features(alpaca_broker PUBLIC cxx_std_20)
 
 add_library(alpaca::broker ALIAS alpaca_broker)
+
+add_library(alpaca_data
+    src/alpaca/data/client.cpp
+    src/alpaca/data/live/websocket.cpp
+    src/alpaca/data/live/stock.cpp
+    src/alpaca/data/live/crypto.cpp
+    src/alpaca/data/live/option.cpp
+    src/alpaca/data/live/news.cpp)
+target_link_libraries(alpaca_data PUBLIC alpaca::core)
+if(ALPACA_VENDOR_DEPS)
+    target_include_directories(alpaca_data PUBLIC ${ALPACA_BOOST_INCLUDE_DIR})
+else()
+    target_link_libraries(alpaca_data PUBLIC Boost::boost)
+endif()
+target_include_directories(alpaca_data
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>)
+target_compile_features(alpaca_data PUBLIC cxx_std_20)
+
+add_library(alpaca::data ALIAS alpaca_data)
 
 add_executable(alpaca_example_place_order examples/place_order.cpp)
 target_link_libraries(alpaca_example_place_order PRIVATE alpaca::trading)
@@ -238,6 +265,71 @@ if(ALPACA_BUILD_TESTS)
     add_executable(alpaca_trading_transfer_tests tests/unit/test_trading_transfers.cpp)
     target_link_libraries(alpaca_trading_transfer_tests PRIVATE alpaca::trading)
     add_test(NAME alpaca_trading_transfer_tests COMMAND alpaca_trading_transfer_tests)
+
+    add_executable(alpaca_data_stock_bars_tests tests/unit/test_data_stock_bars.cpp)
+    target_link_libraries(alpaca_data_stock_bars_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_stock_bars_tests COMMAND alpaca_data_stock_bars_tests)
+    add_executable(alpaca_data_stock_quotes_tests tests/unit/test_data_stock_quotes.cpp)
+    target_link_libraries(alpaca_data_stock_quotes_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_stock_quotes_tests COMMAND alpaca_data_stock_quotes_tests)
+    add_executable(alpaca_data_latest_quotes_tests tests/unit/test_data_latest_quotes.cpp)
+    target_link_libraries(alpaca_data_latest_quotes_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_latest_quotes_tests COMMAND alpaca_data_latest_quotes_tests)
+    add_executable(alpaca_data_stock_trades_tests tests/unit/test_data_stock_trades.cpp)
+    target_link_libraries(alpaca_data_stock_trades_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_stock_trades_tests COMMAND alpaca_data_stock_trades_tests)
+    add_executable(alpaca_data_latest_trades_tests tests/unit/test_data_latest_trades.cpp)
+    target_link_libraries(alpaca_data_latest_trades_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_latest_trades_tests COMMAND alpaca_data_latest_trades_tests)
+    add_executable(alpaca_data_latest_trades_reverse_tests
+                   tests/unit/test_data_latest_trades_reverse.cpp)
+    target_link_libraries(alpaca_data_latest_trades_reverse_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_latest_trades_reverse_tests
+             COMMAND alpaca_data_latest_trades_reverse_tests)
+    add_executable(alpaca_data_latest_bars_tests tests/unit/test_data_latest_bars.cpp)
+    target_link_libraries(alpaca_data_latest_bars_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_latest_bars_tests COMMAND alpaca_data_latest_bars_tests)
+    add_executable(alpaca_data_snapshots_tests tests/unit/test_data_snapshots.cpp)
+    target_link_libraries(alpaca_data_snapshots_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_snapshots_tests COMMAND alpaca_data_snapshots_tests)
+    add_executable(alpaca_data_crypto_bars_tests tests/unit/test_data_crypto_bars.cpp)
+    target_link_libraries(alpaca_data_crypto_bars_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_crypto_bars_tests COMMAND alpaca_data_crypto_bars_tests)
+    add_executable(alpaca_data_crypto_latest_orderbooks_tests
+                   tests/unit/test_data_crypto_latest_orderbooks.cpp)
+    target_link_libraries(alpaca_data_crypto_latest_orderbooks_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_crypto_latest_orderbooks_tests
+             COMMAND alpaca_data_crypto_latest_orderbooks_tests)
+    add_executable(alpaca_data_crypto_quotes_tests tests/unit/test_data_crypto_quotes.cpp)
+    target_link_libraries(alpaca_data_crypto_quotes_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_crypto_quotes_tests COMMAND alpaca_data_crypto_quotes_tests)
+    add_executable(alpaca_data_crypto_trades_tests tests/unit/test_data_crypto_trades.cpp)
+    target_link_libraries(alpaca_data_crypto_trades_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_crypto_trades_tests COMMAND alpaca_data_crypto_trades_tests)
+    add_executable(alpaca_data_crypto_latest_tests tests/unit/test_data_crypto_latest.cpp)
+    target_link_libraries(alpaca_data_crypto_latest_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_crypto_latest_tests COMMAND alpaca_data_crypto_latest_tests)
+    add_executable(alpaca_data_crypto_snapshots_tests tests/unit/test_data_crypto_snapshots.cpp)
+    target_link_libraries(alpaca_data_crypto_snapshots_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_crypto_snapshots_tests COMMAND alpaca_data_crypto_snapshots_tests)
+    add_executable(alpaca_data_options_tests tests/unit/test_data_options.cpp)
+    target_link_libraries(alpaca_data_options_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_options_tests COMMAND alpaca_data_options_tests)
+    add_executable(alpaca_data_screener_tests tests/unit/test_data_screener.cpp)
+    target_link_libraries(alpaca_data_screener_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_screener_tests COMMAND alpaca_data_screener_tests)
+    add_executable(alpaca_data_news_tests tests/unit/test_data_news.cpp)
+    target_link_libraries(alpaca_data_news_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_news_tests COMMAND alpaca_data_news_tests)
+    add_executable(alpaca_data_corporate_actions_tests tests/unit/test_data_corporate_actions.cpp)
+    target_link_libraries(alpaca_data_corporate_actions_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_corporate_actions_tests COMMAND alpaca_data_corporate_actions_tests)
+    add_executable(alpaca_data_option_meta_exchanges_tests tests/unit/test_data_option_meta_exchanges.cpp)
+    target_link_libraries(alpaca_data_option_meta_exchanges_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_option_meta_exchanges_tests COMMAND alpaca_data_option_meta_exchanges_tests)
+    add_executable(alpaca_data_raw_endpoints_tests tests/unit/test_data_raw_endpoints.cpp)
+    target_link_libraries(alpaca_data_raw_endpoints_tests PRIVATE alpaca::data)
+    add_test(NAME alpaca_data_raw_endpoints_tests COMMAND alpaca_data_raw_endpoints_tests)
 
     if(ALPACA_BUILD_LIVE_TEST)
         add_executable(alpaca_trading_live_tests tests/integration/test_trading_live.cpp)

@@ -17,11 +17,14 @@ public:
 
     OrderSubmissionResult submit_order(const OrderRequest& request) const;
     Order get_order(const std::string& order_id) const;
+    Order get_order_by_client_id(const std::string& client_order_id) const;
     OrderSubmissionResult cancel_order(const std::string& order_id) const;
+    std::vector<OrderSubmissionResult> cancel_orders() const;
     std::vector<Order> list_orders(const GetOrdersRequest& request) const;
     std::vector<Position> list_positions() const;
     Position get_position(const std::string& symbol) const;
     Position close_position(const std::string& symbol, const ClosePositionRequest& request) const;
+    void exercise_options_position(const std::string& symbol_or_contract_id) const;
     std::vector<Asset> list_assets(const ListAssetsRequest& request) const;
     Asset get_asset(const std::string& symbol) const;
     Clock get_clock() const;
@@ -46,6 +49,9 @@ public:
     AccountConfiguration get_account_configuration() const;
     AccountConfiguration update_account_configuration(
         const AccountConfigurationPatch& patch) const;
+
+    OptionContractsResponse get_option_contracts(const GetOptionContractsRequest& request) const;
+    OptionContract get_option_contract(const std::string& symbol_or_id) const;
 
     [[nodiscard]] const core::ClientConfig& config() const noexcept { return config_; }
 

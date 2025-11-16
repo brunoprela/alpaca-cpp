@@ -165,4 +165,19 @@ struct GetCorporateAnnouncementsRequest {
     std::optional<std::string> date_type;
 };
 
+struct GetOptionContractsRequest {
+    std::optional<std::vector<std::string>> underlying_symbols;
+    std::optional<std::string> status;
+    std::optional<std::string> expiration_date;
+    std::optional<std::string> expiration_date_gte;
+    std::optional<std::string> expiration_date_lte;
+    std::optional<std::string> root_symbol;
+    std::optional<std::string> type;  // ContractType: "call" or "put"
+    std::optional<std::string> style; // ExerciseStyle: "american" or "european"
+    std::optional<std::string> strike_price_gte;
+    std::optional<std::string> strike_price_lte;
+    std::optional<int> limit;
+    std::optional<std::string> page_token;
+};
+
 } // namespace alpaca::trading

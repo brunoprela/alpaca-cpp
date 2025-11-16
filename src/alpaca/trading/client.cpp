@@ -1006,12 +1006,64 @@ Order TradingClient::get_order(const std::string &order_id) const {
     return parse_order(response.body);
 }
 
+Order TradingClient::get_order_by_client_id(const std::string &client_order_id) const {
+    auto response = send_request(core::HttpMethod::Get, "/v2/orders:by_client_order_id?client_order_id=" + client_order_id);
+    ensure_success(response.status_code, "get_order_by_client_id", response.body);
+    return parse_order(response.body);
+}
+
 OrderSubmissionResult TradingClient::cancel_order(const std::string &order_id) const {
     auto response = send_request(core::HttpMethod::Delete, "/v2/orders/" + order_id);
     return OrderSubmissionResult{
         .status_code = response.status_code,
         .body = response.body,
     };
+}
+
+std::vector<OrderSubmissionResult> TradingClient::cancel_orders() const {
+    auto response = send_request(core::HttpMethod::Delete, "/v2/orders");
+    ensure_success(response.status_code, "cancel_orders", response.body);
+    
+    std::string storage(response.body);
+    storage.append(simdjson::SIMDJSON_PADDING, '\0');
+    simdjson::ondemand::parser parser;
+    auto doc = parser.iterate(storage.data(), response.body.size(), storage.size());
+    if (doc.error()) {
+        throw std::runtime_error("Failed to parse cancel orders payload");
+    }
+    auto arr_result = doc.value().get_array();
+    if (arr_result.error()) {
+        throw std::runtime_error("Invalid cancel orders payload");
+    }
+    auto arr = arr_result.value();
+    std::vector<OrderSubmissionResult> results;
+    for (auto element : arr) {
+        if (element.error()) {
+            continue;
+        }
+        auto obj = element.value().get_object();
+        if (obj.error()) {
+            continue;
+        }
+        auto object = obj.value();
+        OrderSubmissionResult result;
+        auto status_field = object.find_field_unordered("status");
+        if (!status_field.error()) {
+            auto status = status_field.value().get_int64();
+            if (!status.error()) {
+                result.status_code = static_cast<int>(status.value());
+            }
+        }
+        auto body_field = object.find_field_unordered("body");
+        if (!body_field.error()) {
+            auto body_str = body_field.value().get_string();
+            if (!body_str.error()) {
+                result.body = std::string(std::string_view(body_str.value()));
+            }
+        }
+        results.emplace_back(result);
+    }
+    return results;
 }
 
 std::vector<Order> TradingClient::list_orders(const GetOrdersRequest &request) const {
@@ -1039,6 +1091,11 @@ Position TradingClient::close_position(const std::string &symbol,
     auto response = send_request(core::HttpMethod::Delete, "/v2/positions/" + symbol + query);
     ensure_success(response.status_code, "close_position", response.body);
     return parse_position(response.body);
+}
+
+void TradingClient::exercise_options_position(const std::string &symbol_or_contract_id) const {
+    auto response = send_request(core::HttpMethod::Post, "/v2/positions/" + symbol_or_contract_id + "/exercise");
+    ensure_success(response.status_code, "exercise_options_position", response.body);
 }
 
 std::vector<Asset> TradingClient::list_assets(const ListAssetsRequest &request) const {
@@ -1179,6 +1236,160 @@ TradingClient::update_account_configuration(const AccountConfigurationPatch &pat
     auto response = send_request(core::HttpMethod::Patch, "/v2/account/configurations", payload);
     ensure_success(response.status_code, "update_account_configuration", response.body);
     return parse_account_configuration(response.body);
+}
+
+OptionContract parse_option_contract_from_object(simdjson::ondemand::object &object) {
+    OptionContract contract;
+    contract.id = get_string_or_empty(object, "id");
+    contract.symbol = get_string_or_empty(object, "symbol");
+    contract.name = get_string_or_empty(object, "name");
+    contract.status = get_string_or_empty(object, "status");
+    contract.tradable = get_bool_or_default(object, "tradable");
+    contract.expiration_date = get_string_or_empty(object, "expiration_date");
+    contract.root_symbol = get_string_or_empty(object, "root_symbol");
+    contract.underlying_symbol = get_string_or_empty(object, "underlying_symbol");
+    contract.underlying_asset_id = get_string_or_empty(object, "underlying_asset_id");
+    contract.type = get_string_or_empty(object, "type");
+    contract.style = get_string_or_empty(object, "style");
+    auto strike_price_field = object.find_field_unordered("strike_price");
+    if (!strike_price_field.error()) {
+        auto strike_price = strike_price_field.value().get_double();
+        if (!strike_price.error()) {
+            contract.strike_price = strike_price.value();
+        }
+    }
+    contract.size = get_string_or_empty(object, "size");
+    contract.open_interest = get_string_or_empty(object, "open_interest");
+    contract.open_interest_date = get_string_or_empty(object, "open_interest_date");
+    contract.close_price = get_string_or_empty(object, "close_price");
+    contract.close_price_date = get_string_or_empty(object, "close_price_date");
+    return contract;
+}
+
+OptionContract parse_option_contract(std::string_view payload) {
+    std::string storage(payload);
+    storage.append(simdjson::SIMDJSON_PADDING, '\0');
+    simdjson::ondemand::parser parser;
+    auto doc = parser.iterate(storage.data(), payload.size(), storage.size());
+    if (doc.error()) {
+        throw std::runtime_error("Failed to parse option contract payload");
+    }
+    auto obj_result = doc.value().get_object();
+    if (obj_result.error()) {
+        throw std::runtime_error("Invalid option contract payload");
+    }
+    auto obj = obj_result.value();
+    return parse_option_contract_from_object(obj);
+}
+
+OptionContractsResponse parse_option_contracts(std::string_view payload) {
+    std::string storage(payload);
+    storage.append(simdjson::SIMDJSON_PADDING, '\0');
+    simdjson::ondemand::parser parser;
+    auto doc = parser.iterate(storage.data(), payload.size(), storage.size());
+    if (doc.error()) {
+        throw std::runtime_error("Failed to parse option contracts payload");
+    }
+    auto obj_result = doc.value().get_object();
+    if (obj_result.error()) {
+        throw std::runtime_error("Invalid option contracts payload");
+    }
+    auto obj = obj_result.value();
+    OptionContractsResponse response;
+    
+    auto contracts_field = obj.find_field_unordered("option_contracts");
+    if (!contracts_field.error()) {
+        auto contracts_arr = contracts_field.value().get_array();
+        if (!contracts_arr.error()) {
+            for (auto element : contracts_arr.value()) {
+                if (element.error()) {
+                    continue;
+                }
+                auto contract_obj = element.value().get_object();
+                if (contract_obj.error()) {
+                    continue;
+                }
+                response.option_contracts.emplace_back(parse_option_contract_from_object(contract_obj.value()));
+            }
+        }
+    }
+    
+    response.next_page_token = get_string_or_empty(obj, "next_page_token");
+    return response;
+}
+
+std::string build_option_contracts_query(const GetOptionContractsRequest &request) {
+    std::ostringstream oss;
+    bool first = true;
+    auto append = [&](std::string_view key, const std::string &value) {
+        if (value.empty()) {
+            return;
+        }
+        oss << (first ? '?' : '&') << key << '=' << value;
+        first = false;
+    };
+    auto append_int = [&](std::string_view key, int value) {
+        oss << (first ? '?' : '&') << key << '=' << value;
+        first = false;
+    };
+
+    if (request.underlying_symbols && !request.underlying_symbols->empty()) {
+        std::string symbols;
+        for (size_t i = 0; i < request.underlying_symbols->size(); ++i) {
+            if (i > 0) {
+                symbols += ',';
+            }
+            symbols += (*request.underlying_symbols)[i];
+        }
+        append("underlying_symbols", symbols);
+    }
+    if (request.status) {
+        append("status", *request.status);
+    }
+    if (request.expiration_date) {
+        append("expiration_date", *request.expiration_date);
+    }
+    if (request.expiration_date_gte) {
+        append("expiration_date.gte", *request.expiration_date_gte);
+    }
+    if (request.expiration_date_lte) {
+        append("expiration_date.lte", *request.expiration_date_lte);
+    }
+    if (request.root_symbol) {
+        append("root_symbol", *request.root_symbol);
+    }
+    if (request.type) {
+        append("type", *request.type);
+    }
+    if (request.style) {
+        append("style", *request.style);
+    }
+    if (request.strike_price_gte) {
+        append("strike_price.gte", *request.strike_price_gte);
+    }
+    if (request.strike_price_lte) {
+        append("strike_price.lte", *request.strike_price_lte);
+    }
+    if (request.limit) {
+        append_int("limit", *request.limit);
+    }
+    if (request.page_token) {
+        append("page_token", *request.page_token);
+    }
+    return oss.str();
+}
+
+OptionContractsResponse TradingClient::get_option_contracts(const GetOptionContractsRequest &request) const {
+    auto query = build_option_contracts_query(request);
+    auto response = send_request(core::HttpMethod::Get, "/v2/options/contracts" + query);
+    ensure_success(response.status_code, "get_option_contracts", response.body);
+    return parse_option_contracts(response.body);
+}
+
+OptionContract TradingClient::get_option_contract(const std::string &symbol_or_id) const {
+    auto response = send_request(core::HttpMethod::Get, "/v2/options/contracts/" + symbol_or_id);
+    ensure_success(response.status_code, "get_option_contract", response.body);
+    return parse_option_contract(response.body);
 }
 
 core::HttpResponse TradingClient::send_request(core::HttpMethod method, std::string_view path,
